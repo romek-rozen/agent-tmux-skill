@@ -157,14 +157,19 @@ use `peek` if you need more).
   mirrors keystrokes to every pane in a window — that's the only way input hits
   "all panes". Keep it off (default). If unsure:
   `tmux -L "$SOCKET" setw synchronize-panes off`.
-- **Naming convention for orchestration** — make roles obvious in the session name:
+- **Name sessions by what they DO, not by number.** `w1/w2/w3` is opaque — a
+  human looking at the list can't tell what each is for. Use a short role prefix
+  plus a task slug: `orch`, `w-auth-tests`, `w-api-refactor`, `w-docs`. Keep it
+  slug-like (lowercase, hyphens, no spaces) and short.
   - orchestrator: `orch`
-  - workers: `w1`, `w2`, `w3`, …
-  Then routing is explicit: `tm.sh send orch "..."`, `tm.sh send w2 "..."`.
-- **Which one is the orchestrator?** The session literally named `orch`.
-  List roles any time: `tm.sh list` (or `tmux -L "$SOCKET" list-sessions`).
-  Optionally tag a pane title so it shows on screen:
-  `tmux -L "$SOCKET" select-pane -t orch:0.0 -T orchestrator`.
+  - workers: `w-<task>` (e.g. `w-login-bug`, `w-migrate-db`)
+  Then routing reads clearly: `tm.sh send orch "..."`, `tm.sh send w-auth-tests "..."`.
+- **Which one is the orchestrator?** The session named `orch`. List roles any
+  time with `tm.sh list` — with task-based names the list itself explains who
+  does what. Optionally also set an on-screen pane title:
+  `tmux -L "$SOCKET" select-pane -t w-auth-tests:0.0 -T "worker: auth tests"`.
+- If you truly don't know a session's purpose, `peek <session>` shows its
+  current screen; but prefer naming it right at `start` so this never happens.
 - **Reading is per-target too.** `peek <session>` / `capture-pane -t <session>`
   read only that session — logs from one agent never leak into another's capture.
 
