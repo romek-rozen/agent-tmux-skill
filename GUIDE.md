@@ -37,11 +37,11 @@ That's all you need to start.
 ### "If it's isolated, can I still watch it?" — yes!
 
 Isolation does **not** mean you're locked out. The skill just puts agent
-sessions on a **separate socket** (a private channel) so they don't mix with
-your own tmux sessions. You can attach and watch live at any time:
+sessions on a **separate named socket** (called `agent`) so they don't mix with
+your own tmux sessions. You can attach and watch live at any time — it's short:
 
 ```bash
-tmux -S <socket-path> attach -t <session>     # watch live (Ctrl+b then d to leave)
+tmux -L agent attach -t <session>     # watch live (Ctrl+b then d to leave)
 ```
 
 The `start` command prints this exact line for you. The isolation only buys two
@@ -127,7 +127,7 @@ cd skills/tmux
 ./scripts/tm.sh peek demo 20
 
 # watch it live in another terminal (optional) — paste what `start` printed:
-#   tmux -S <socket> attach -t demo      (leave with Ctrl+b then d)
+#   tmux -L agent attach -t demo      (leave with Ctrl+b then d)
 
 # clean up when done
 ./scripts/tm.sh kill demo

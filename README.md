@@ -21,8 +21,9 @@ Agents are great at one-shot commands but bad at *interactive* terminals:
 REPLs, debuggers, installers that prompt, SSH sessions, TUIs, or another agent
 running in a pane. This skill gives them a safe, token-cheap way to do it:
 
-- **Private socket** — agent sessions live under `$AGENT_TMUX_SOCKET_DIR`,
-  isolated from your own tmux. Clean up with one `kill-server`.
+- **Named private socket** — agent sessions run on `tmux -L agent`, isolated
+  from your own tmux (clean up with one `kill-server`) yet easy to watch:
+  `tmux -L agent attach -t <session>`.
 - **Token-cheap** — `wait` polls silently and returns just success/failure;
   timeouts print only the last 40 lines; `peek N` fetches exactly N lines.
 - **Focus-safe** — automation only uses `send-keys` / `capture-pane`. It never

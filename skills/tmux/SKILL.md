@@ -41,25 +41,24 @@ A wrapper handles the socket and common actions, so prefer it over raw `tmux`:
 
 Actions: `start | send | type | key | run | wait | peek | list | attach-cmd | kill | kill-all | doctor`.
 Run `./scripts/tm.sh doctor` first if anything misbehaves (read-only health check:
-tmux version, socket dir/socket, live sessions, other agent sockets).
-Socket is `$AGENT_TMUX_SOCKET` (default `<AGENT_TMUX_SOCKET_DIR>/agent.sock`); target
-defaults to `<session>:0.0`. New sessions start in the current directory (the project
-you're working in); choose another with `start <s> --cwd /path ...` or `TM_CWD=/path`. Drop to raw `tmux -S "$SOCKET" ...` (below) only for
+tmux version, socket name, live sessions).
+Socket is the named tmux socket `$AGENT_TMUX_SOCKET` (default `agent`), i.e.
+`tmux -L agent ...`; target defaults to `<session>:0.0`. New sessions start in the
+current directory (the project you're working in); choose another with
+`start <s> --cwd /path ...` or `TM_CWD=/path`. Drop to raw `tmux -L agent ...` (below) only for
 anything the wrapper doesn't cover (extra windows/panes, custom capture ranges).
 
 ## Quickstart (raw tmux, isolated socket)
 
 ```bash
-SOCKET_DIR="${AGENT_TMUX_SOCKET_DIR:-${TMPDIR:-/tmp}/agent-tmux-sockets}"
-mkdir -p "$SOCKET_DIR"
-SOCKET="$SOCKET_DIR/agent.sock"    # keep agent sessions separate from user tmux
+SOCKET=agent                      # named socket: isolated but easy to attach (tmux -L)
 SESSION=agent-python              # slug-like names, no spaces
 
 # -c "$PWD" makes the session start in the project dir, not the tmux server's default
-tmux -S "$SOCKET" new -d -s "$SESSION" -c "$PWD" -n shell
-tmux -S "$SOCKET" send-keys -t "$SESSION":0.0 -- 'PYTHON_BASIC_REPL=1 python3 -q' Enter
-tmux -S "$SOCKET" capture-pane -p -J -t "$SESSION":0.0 -S -200   # read output
-tmux -S "$SOCKET" kill-session -t "$SESSION"                    # clean up
+tmux -L "$SOCKET" new -d -s "$SESSION" -c "$PWD" -n shell
+tmux -L "$SOCKET" send-keys -t "$SESSION":0.0 -- 'PYTHON_BASIC_REPL=1 python3 -q' Enter
+tmux -L "$SOCKET" capture-pane -p -J -t "$SESSION":0.0 -S -200   # read output
+tmux -L "$SOCKET" kill-session -t "$SESSION"                    # clean up
 ```
 
 After starting a session, ALWAYS tell the user how to monitor it — give a
@@ -67,9 +66,9 @@ copy/paste command right away and again at the end of your work:
 
 ```
 To watch this session live:
-  tmux -S "$SOCKET" attach -t agent-python      (detach with Ctrl+b d)
+  tmux -L agent attach -t agent-python      (detach with Ctrl+b d)
 Or capture output once:
-  tmux -S "$SOCKET" capture-pane -p -J -t agent-python:0.0 -S -200
+  tmux -L agent capture-pane -p -J -t agent-python:0.0 -S -200
 ```
 
 ## Focus & safety policy
@@ -77,9 +76,9 @@ Or capture output once:
 - Automation uses `send-keys` / `capture-pane` only. NEVER `attach` on the user's
   behalf — `attach` hijacks *the agent's* terminal. Attaching is for the human;
   the agent only prints the attach command (see `attach-cmd`).
-- Isolation ≠ no visibility. The private socket only *separates* agent sessions
+- Isolation ≠ no visibility. The named socket only *separates* agent sessions
   from the user's personal tmux; the human can attach any time with
-  `tmux -S "$SOCKET" attach -t <session>` to watch live, and detach with
+  `tmux -L agent attach -t <session>` to watch live, and detach with
   `Ctrl+b d` without killing anything. Isolation is for safe cleanup
   (`kill-server` touches only agent sessions) and zero collision with the
   user's own tmux/config — not to hide the sessions.
@@ -88,11 +87,10 @@ Or capture output once:
 
 ## Socket convention
 
-- Place sockets under `AGENT_TMUX_SOCKET_DIR` (default
-  `${TMPDIR:-/tmp}/agent-tmux-sockets`) and always pass `-S "$SOCKET"` so
-  sessions can be enumerated and cleaned. Create the dir first with `mkdir -p`.
-- Default socket path unless you need further isolation:
-  `SOCKET="$AGENT_TMUX_SOCKET_DIR/agent.sock"`.
+- Use a **named** tmux socket via `-L "$SOCKET"` (default name `agent`). Named
+  sockets stay isolated from the user's default tmux but are trivial to attach
+  (`tmux -L agent attach -t <session>`) — no long path to paste.
+- Override the name with `AGENT_TMUX_SOCKET=<name>` if you need more isolation.
 - Add `-f /dev/null` for a clean config if the user's tmux config interferes;
   omit it when you need their config.
 
@@ -100,26 +98,26 @@ Or capture output once:
 
 - Target format: `{session}:{window}.{pane}`, defaults to `:0.0` if omitted.
 - Keep names short: `agent-py`, `agent-gdb`, `agent-ssh`.
-- `tmux -S "$SOCKET" list-sessions` — sessions on this socket
-- `tmux -S "$SOCKET" list-panes -a` / `list-windows -t "$SESSION"`
-- Enumerate with metadata: `./scripts/find-sessions.sh -S "$SOCKET"`
-  (add `-q partial-name` to filter, or `--all` to scan every agent socket).
+- `tmux -L "$SOCKET" list-sessions` — sessions on this socket
+- `tmux -L "$SOCKET" list-panes -a` / `list-windows -t "$SESSION"`
+- Enumerate with metadata: `./scripts/find-sessions.sh -L "$SOCKET"`
+  (add `-q partial-name` to filter).
 
 ## Sending input safely
 
 - Prefer literal sends to avoid shell splitting / TUI paste quirks:
-  `tmux -S "$SOCKET" send-keys -t "$TARGET" -l -- "$text"`
-  then a separate `tmux -S "$SOCKET" send-keys -t "$TARGET" Enter`
+  `tmux -L "$SOCKET" send-keys -t "$TARGET" -l -- "$text"`
+  then a separate `tmux -L "$SOCKET" send-keys -t "$TARGET" Enter`
   (a short `sleep 0.1` between them helps interactive TUIs).
 - Control keys: `C-c` (interrupt), `C-d` (EOF), `C-z` (suspend), `Escape`,
-  `Tab`, `Up`. Example: `tmux -S "$SOCKET" send-keys -t "$TARGET" C-c`.
+  `Tab`, `Up`. Example: `tmux -L "$SOCKET" send-keys -t "$TARGET" C-c`.
 - Inline commands: single-quote or ANSI-C quote to avoid expansion, e.g.
   `send-keys -t "$TARGET" -- $'python3 -m http.server 8000' Enter`.
 
 ## Watching output
 
 - Snapshot recent history (joined lines avoid wrap artifacts):
-  `tmux -S "$SOCKET" capture-pane -p -J -t "$TARGET" -S -200`.
+  `tmux -L "$SOCKET" capture-pane -p -J -t "$TARGET" -S -200`.
 - Whole scrollback: `capture-pane -p -J -t "$TARGET" -S -`.
 - For sync, poll for expected text instead of blind `sleep`. `tmux wait-for`
   does NOT watch pane output — use the helper below.
@@ -152,20 +150,20 @@ use `peek` if you need more).
 
 ```bash
 # Is it waiting for input?
-tmux -S "$SOCKET" capture-pane -p -t "$TARGET" | tail -12 | grep -Ei '❯|yes.*no|proceed|permission|\(y/n\)'
+tmux -L "$SOCKET" capture-pane -p -t "$TARGET" | tail -12 | grep -Ei '❯|yes.*no|proceed|permission|\(y/n\)'
 # Approve a prompt / pick an option:
-tmux -S "$SOCKET" send-keys -t "$TARGET" 'y' Enter
-tmux -S "$SOCKET" send-keys -t "$TARGET" '2' Enter
+tmux -L "$SOCKET" send-keys -t "$TARGET" 'y' Enter
+tmux -L "$SOCKET" send-keys -t "$TARGET" '2' Enter
 # Hand it a task:
-tmux -S "$SOCKET" send-keys -t "$TARGET" -l -- "Fix the bug in auth.js"; sleep 0.1
-tmux -S "$SOCKET" send-keys -t "$TARGET" Enter
+tmux -L "$SOCKET" send-keys -t "$TARGET" -l -- "Fix the bug in auth.js"; sleep 0.1
+tmux -L "$SOCKET" send-keys -t "$TARGET" Enter
 ```
 
 ## Cleanup
 
-- One session: `tmux -S "$SOCKET" kill-session -t "$SESSION"`.
-- All on a socket: `tmux -S "$SOCKET" kill-server`.
-- Loop-kill: `tmux -S "$SOCKET" list-sessions -F '#{session_name}' | xargs -r -n1 tmux -S "$SOCKET" kill-session -t`.
+- One session: `tmux -L "$SOCKET" kill-session -t "$SESSION"`.
+- All on a socket: `tmux -L "$SOCKET" kill-server`.
+- Loop-kill: `tmux -L "$SOCKET" list-sessions -F '#{session_name}' | xargs -r -n1 tmux -L "$SOCKET" kill-session -t`.
 
 ## Running a coding agent inside tmux (key config)
 

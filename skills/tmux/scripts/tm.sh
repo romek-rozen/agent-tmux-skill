@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# tm.sh — thin wrapper over tmux on a private agent socket.
+# tm.sh — thin wrapper over tmux on a private, named agent socket.
 # Handles the socket + common actions so you don't retype boilerplate.
 #
-#   Socket dir: $AGENT_TMUX_SOCKET_DIR (default ${TMPDIR:-/tmp}/agent-tmux-sockets)
-#   Socket:     $AGENT_TMUX_SOCKET      (default <dir>/agent.sock)
+#   Socket name: $AGENT_TMUX_SOCKET (default "agent"), used as tmux -L <name>.
+#     Isolated from the user's default tmux, but easy to attach:
+#       tmux -L agent attach -t <session>
 #   Default target pane: <session>:0.0
 #   Working dir for new sessions: $TM_CWD (default: current $PWD)
 #
@@ -25,25 +26,22 @@
 # Every session/target defaults to window 0, pane 0. Names should be slugs.
 set -euo pipefail
 
-_TMP="${TMPDIR:-/tmp}"; _TMP="${_TMP%/}"   # strip trailing slash so paths don't get //
-SOCKET_DIR="${AGENT_TMUX_SOCKET_DIR:-$_TMP/agent-tmux-sockets}"
+SOCKET="${AGENT_TMUX_SOCKET:-agent}"        # tmux -L <name>: private, but easy to attach
 CWD="${TM_CWD:-$PWD}"                       # new sessions start here (the project dir)
-SOCKET="${AGENT_TMUX_SOCKET:-$SOCKET_DIR/agent.sock}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-mkdir -p "$SOCKET_DIR"
 command -v tmux >/dev/null 2>&1 || { echo "tmux not found in PATH" >&2; exit 1; }
 
-t() { tmux -S "$SOCKET" "$@"; }
+t() { tmux -L "$SOCKET" "$@"; }
 target() { printf '%s:0.0' "$1"; }
 
 attach_cmd() {
   local s="$1"
   cat <<EOF
 To watch this session live:
-  tmux -S "$SOCKET" attach -t $s      (detach with Ctrl+b d)
+  tmux -L $SOCKET attach -t $s      (detach with Ctrl+b d)
 Or capture output once:
-  tmux -S "$SOCKET" capture-pane -p -J -t $s:0.0 -S -200
+  tmux -L $SOCKET capture-pane -p -J -t $s:0.0 -S -200
 EOF
 }
 
@@ -78,14 +76,14 @@ case "$cmd" in
     ;;
   wait)
     s="${1:?session}"; pat="${2:?regex}"; to="${3:-15}"
-    "$HERE/wait-for-text.sh" -t "$(target "$s")" -p "$pat" -S "$SOCKET" -T "$to"
+    "$HERE/wait-for-text.sh" -t "$(target "$s")" -p "$pat" -L "$SOCKET" -T "$to"
     ;;
   peek)
     s="${1:?session}"; n="${2:-50}"
     t capture-pane -p -J -t "$(target "$s")" -S "-${n}"
     ;;
   list)
-    "$HERE/find-sessions.sh" -S "$SOCKET"
+    "$HERE/find-sessions.sh" -L "$SOCKET"
     ;;
   attach-cmd)
     attach_cmd "${1:?session}"
@@ -98,17 +96,13 @@ case "$cmd" in
     ;;
   doctor)
     # Read-only preflight. No focus stealing, no attach, no secrets.
-    echo "tmux:        $(command -v tmux || echo 'NOT FOUND') ($(tmux -V 2>/dev/null || echo '?'))"
-    echo "socket dir:  $SOCKET_DIR $([[ -d $SOCKET_DIR ]] && echo '(exists)' || echo '(missing)')"
+    echo "tmux:         $(command -v tmux || echo 'NOT FOUND') ($(tmux -V 2>/dev/null || echo '?'))"
+    echo "socket name:  $SOCKET  (attach: tmux -L $SOCKET attach -t <session>)"
     if t list-sessions >/dev/null 2>&1; then
-      echo "socket:      $SOCKET (live)"
-      echo "sessions:"; "$HERE/find-sessions.sh" -S "$SOCKET" | sed 's/^/  /'
+      echo "server:       live"
+      echo "sessions:"; "$HERE/find-sessions.sh" -L "$SOCKET" | sed 's/^/  /'
     else
-      echo "socket:      $SOCKET (no running server)"
-    fi
-    if [[ -d $SOCKET_DIR ]]; then
-      other=$(find "$SOCKET_DIR" -type s ! -name "$(basename "$SOCKET")" 2>/dev/null)
-      [[ -n $other ]] && { echo "other agent sockets:"; echo "$other" | sed 's/^/  /'; }
+      echo "server:       no running server yet"
     fi
     ;;
   *)

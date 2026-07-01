@@ -12,6 +12,7 @@ Options:
   -p, --pattern   regex pattern to look for, required
   -F, --fixed     treat pattern as a fixed string (grep -F)
   -S, --socket    tmux socket path (passed to tmux -S), optional
+  -L, --socket-name  tmux socket name (passed to tmux -L), optional
   -T, --timeout   seconds to wait (integer, default: 15)
   -i, --interval  poll interval in seconds (default: 0.5)
   -l, --lines     number of history lines to inspect (integer, default: 1000)
@@ -23,6 +24,7 @@ target=""
 pattern=""
 grep_flag="-E"
 socket=""
+socket_name=""
 timeout=15
 interval=0.5
 lines=1000
@@ -32,7 +34,8 @@ while [[ $# -gt 0 ]]; do
     -t|--target)   target="${2-}"; shift 2 ;;
     -p|--pattern)  pattern="${2-}"; shift 2 ;;
     -F|--fixed)    grep_flag="-F"; shift ;;
-    -S|--socket)   socket="${2-}"; shift 2 ;;
+    -S|--socket)      socket="${2-}"; shift 2 ;;
+    -L|--socket-name) socket_name="${2-}"; shift 2 ;;
     -T|--timeout)  timeout="${2-}"; shift 2 ;;
     -i|--interval) interval="${2-}"; shift 2 ;;
     -l|--lines)    lines="${2-}"; shift 2 ;;
@@ -56,6 +59,7 @@ fi
 
 tmux_cmd=(tmux)
 [[ -n "$socket" ]] && tmux_cmd+=(-S "$socket")
+[[ -n "$socket_name" ]] && tmux_cmd+=(-L "$socket_name")
 
 start_epoch=$(date +%s)
 deadline=$((start_epoch + timeout))

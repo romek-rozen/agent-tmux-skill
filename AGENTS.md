@@ -31,10 +31,11 @@ skills/tmux/
 
 ## Core design rules (do not break these)
 
-1. **Private socket.** All agent sessions live under `$AGENT_TMUX_SOCKET_DIR`
-   (default `${TMPDIR:-/tmp}/agent-tmux-sockets`), socket `agent.sock`. Always
-   pass `-S "$SOCKET"`. This isolates agent sessions from the user's tmux and
-   makes cleanup safe (`kill-server` only affects agent sessions).
+1. **Named private socket.** All agent sessions run on a named tmux socket
+   `$AGENT_TMUX_SOCKET` (default `agent`) via `tmux -L "$SOCKET"`. This isolates
+   agent sessions from the user's default tmux (cleanup safe: `kill-server` only
+   affects agent sessions) while staying trivial to attach:
+   `tmux -L agent attach -t <session>` — no long socket path to paste.
 2. **Never attach on the user's behalf.** Automation uses `send-keys` /
    `capture-pane` only. Print the attach command for the human instead
    (`tm.sh attach-cmd`). Isolation ≠ hiding: the human can attach any time.
