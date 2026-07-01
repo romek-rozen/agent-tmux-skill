@@ -1,7 +1,7 @@
 ---
 name: tmux
 description: Remote-control tmux sessions to drive interactive CLIs (python, gdb/lldb, psql, node REPL, ssh, installers, TUIs, other agents) by sending keystrokes and scraping pane output. Use when you must interact with a long-running or interactive terminal program, monitor background work, answer prompts, or observe a process over time — not for one-off non-interactive commands.
-license: MIT
+license: Apache-2.0
 compatibility: Requires tmux (>=3.0), bash, and grep. Works on macOS and Linux with stock tmux.
 metadata:
   { "os": ["darwin", "linux"], "requires": { "bins": ["tmux", "bash", "grep"] } }
@@ -160,6 +160,15 @@ tmux -S "$SOCKET" send-keys -t "$TARGET" Enter
 - One session: `tmux -S "$SOCKET" kill-session -t "$SESSION"`.
 - All on a socket: `tmux -S "$SOCKET" kill-server`.
 - Loop-kill: `tmux -S "$SOCKET" list-sessions -F '#{session_name}' | xargs -r -n1 tmux -S "$SOCKET" kill-session -t`.
+
+## Running a coding agent inside tmux (key config)
+
+If you run an interactive agent (Claude Code, pi, Codex) *inside* a tmux pane
+(not just this skill's automation), tmux strips modifier keys by default so
+`Shift+Enter` / `Ctrl+Enter` break, and Claude Code notifications/progress get
+swallowed. Fix it in the user's `~/.tmux.conf` — see
+[references/tmux-config.md](references/tmux-config.md) for the exact lines
+(`allow-passthrough`, `extended-keys`, `csi-u`) and version notes.
 
 ## Helper scripts
 

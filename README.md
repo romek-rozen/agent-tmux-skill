@@ -7,6 +7,12 @@ clean up — using a private socket so it never touches your personal tmux.
 Works across **pi**, **Claude Code**, **OpenAI Codex**, and **OpenCode**.
 Pure `bash` + `tmux` + `grep`. No Python, no Node, no other runtime.
 
+> **New to tmux or skills?** Start with the [Beginner's Guide](GUIDE.md).
+>
+> **Running an agent *inside* tmux?** You likely need a few `~/.tmux.conf` lines
+> so `Shift+Enter` and notifications work — see
+> [skills/tmux/references/tmux-config.md](skills/tmux/references/tmux-config.md).
+
 ## Why
 
 Agents are great at one-shot commands but bad at *interactive* terminals:
@@ -70,8 +76,11 @@ recipes (Python/gdb/lldb/psql/ssh), and the raw-tmux reference.
 ## Layout
 
 ```
+GUIDE.md                     # beginner's guide
 skills/tmux/
 ├── SKILL.md                 # agent instructions
+├── references/
+│   └── tmux-config.md       # ~/.tmux.conf for running agents inside tmux
 └── scripts/
     ├── tm.sh                # wrapper: start/send/wait/peek/list/kill/doctor/...
     ├── wait-for-text.sh     # poll a pane for a regex until match or timeout
