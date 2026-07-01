@@ -1,6 +1,6 @@
 # agent-tmux-skill
 
-A portable [Agent Skill](https://agentskills.io) that teaches coding agents to
+A portable Agent Skill that teaches coding agents to
 drive **tmux** — start interactive programs, poll their output, send input, and
 clean up — using a private socket so it never touches your personal tmux.
 
@@ -118,3 +118,9 @@ Built by combining and adapting ideas from prior work:
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Note
+
+This skill follows the "Agent Skills" format (a `SKILL.md` directory convention)
+used by several coding agents. Some background material we consulted while
+building this lives at the community site agentskills.io.

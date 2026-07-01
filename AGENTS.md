@@ -7,8 +7,8 @@ deploying this repository. Humans: see [GUIDE.md](GUIDE.md) and [README.md](READ
 
 A single, portable **Agent Skill** (`skills/tmux/`) that teaches an agent to
 drive interactive terminal programs through tmux. It is shell-only
-(`bash` + `tmux` + `grep`) and follows the [Agent Skills](https://agentskills.io)
-standard, so the same directory works across harnesses.
+(`bash` + `tmux` + `grep`) and follows the common "Agent Skills" format (a
+`SKILL.md` directory convention), so the same directory works across harnesses.
 
 Source of truth for the skill is `skills/tmux/`. Everything else is docs.
 
