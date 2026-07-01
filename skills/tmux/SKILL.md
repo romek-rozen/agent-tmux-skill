@@ -148,6 +148,26 @@ use `peek` if you need more).
 
 ## Driving/monitoring another agent (Claude Code, Codex)
 
+### Addressing: who is who, and routing to ONE target
+
+- **One session = one addressable agent.** `send`/`run`/`send-keys -t <session>`
+  go ONLY to that session's pane. There is **no broadcast** — input is not
+  mirrored to other sessions. Route by choosing the right `-t` target.
+- **Never enable `synchronize-panes`.** With `setw synchronize-panes on`, tmux
+  mirrors keystrokes to every pane in a window — that's the only way input hits
+  "all panes". Keep it off (default). If unsure:
+  `tmux -L "$SOCKET" setw synchronize-panes off`.
+- **Naming convention for orchestration** — make roles obvious in the session name:
+  - orchestrator: `orch`
+  - workers: `w1`, `w2`, `w3`, …
+  Then routing is explicit: `tm.sh send orch "..."`, `tm.sh send w2 "..."`.
+- **Which one is the orchestrator?** The session literally named `orch`.
+  List roles any time: `tm.sh list` (or `tmux -L "$SOCKET" list-sessions`).
+  Optionally tag a pane title so it shows on screen:
+  `tmux -L "$SOCKET" select-pane -t orch:0.0 -T orchestrator`.
+- **Reading is per-target too.** `peek <session>` / `capture-pane -t <session>`
+  read only that session — logs from one agent never leak into another's capture.
+
 ```bash
 # Is it waiting for input?
 tmux -L "$SOCKET" capture-pane -p -t "$TARGET" | tail -12 | grep -Ei '❯|yes.*no|proceed|permission|\(y/n\)'
