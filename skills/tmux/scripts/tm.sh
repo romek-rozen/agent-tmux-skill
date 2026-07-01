@@ -16,6 +16,7 @@
 #   tm.sh key     <session> <key...>              # send raw keys (C-c, Enter, Escape, ...)
 #   tm.sh run     <session> <command...>          # send a full command line + Enter
 #   tm.sh wait    <session> <regex> [timeout]     # wait for regex in pane (default 15s)
+#   tm.sh idle    <session> [stable] [timeout]    # wait until pane stops changing (TUIs/agents)
 #   tm.sh peek    <session> [lines]               # print last N lines (default 50)
 #   tm.sh list                                    # list sessions on the socket
 #   tm.sh attach-cmd <session>                    # print the copy/paste attach command
@@ -77,6 +78,10 @@ case "$cmd" in
   wait)
     s="${1:?session}"; pat="${2:?regex}"; to="${3:-15}"
     "$HERE/wait-for-text.sh" -t "$(target "$s")" -p "$pat" -L "$SOCKET" -T "$to"
+    ;;
+  idle)
+    s="${1:?session}"; st="${2:-3}"; to="${3:-60}"
+    "$HERE/wait-for-idle.sh" -t "$(target "$s")" -L "$SOCKET" -s "$st" -T "$to"
     ;;
   peek)
     s="${1:?session}"; n="${2:-50}"

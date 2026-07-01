@@ -39,7 +39,9 @@ A wrapper handles the socket and common actions, so prefer it over raw `tmux`:
 ./scripts/tm.sh kill  agent-py                                   # or: kill-all
 ```
 
-Actions: `start | send | type | key | run | wait | peek | list | attach-cmd | kill | kill-all | doctor`.
+Actions: `start | send | type | key | run | wait | idle | peek | list | attach-cmd | kill | kill-all | doctor`.
+Use `wait <re>` for deterministic prompts; use `idle` (wait until the pane stops
+changing) for TUIs / live agents that have no stable ready-string.
 Run `./scripts/tm.sh doctor` first if anything misbehaves (read-only health check:
 tmux version, socket name, live sessions).
 Socket is the named tmux socket `$AGENT_TMUX_SOCKET` (default `agent`), i.e.
@@ -148,6 +150,22 @@ use `peek` if you need more).
 
 ## Driving/monitoring another agent (Claude Code, Codex)
 
+### Waiting for a live agent to finish (use `idle`, not `wait`)
+
+A coding-agent TUI (Claude Code, Codex) redraws constantly and its prompt char
+(e.g. `❯`) is almost always on screen, so `wait '❯'` returns immediately even
+while it's still working. For agents/TUIs, wait for **quiescence** instead:
+
+```bash
+tm.sh idle w-auth-tests            # default: idle = no change for 3s, timeout 60s
+tm.sh idle w-auth-tests 5 300      # stricter: 5s of silence, up to 5 min
+```
+
+`idle` returns when the pane content stops changing for `--stable` seconds — a
+reliable "it finished / is waiting for me" signal. Keep using `wait <regex>`
+for deterministic prompts (python `>>>`, shell `$`, gdb). Combine them: send a
+task, `idle` until it settles, then `peek` to read the result.
+
 ### Addressing: who is who, and routing to ONE target
 
 - **One session = one addressable agent.** `send`/`run`/`send-keys -t <session>`
@@ -205,5 +223,9 @@ swallowed. Fix it in the user's `~/.tmux.conf` — see
   on the private socket (see "Fast path" above). Use this first.
 - `./scripts/wait-for-text.sh -t target -p pattern [-F] [-T 20] [-i 0.5] [-l 2000]`
   — poll a pane for a regex (`-F` = fixed string) until match or timeout.
+  For deterministic prompts.
+- `./scripts/wait-for-idle.sh -t target [-L name] [-s 3] [-T 60] [-l 200]`
+  — wait until the pane stops changing (quiescence). For TUIs / live agents
+  with no stable ready-string.
 - `./scripts/find-sessions.sh [-S socket-path | -L socket-name | --all] [-q filter]`
   — list sessions with attached/created metadata across agent sockets.
