@@ -75,8 +75,14 @@ Or capture output once:
 ## Focus & safety policy
 
 - Automation uses `send-keys` / `capture-pane` only. NEVER `attach` on the user's
-  behalf — `attach` hijacks their terminal. Attaching is for the human; the agent
-  only prints the attach command (see `attach-cmd`).
+  behalf — `attach` hijacks *the agent's* terminal. Attaching is for the human;
+  the agent only prints the attach command (see `attach-cmd`).
+- Isolation ≠ no visibility. The private socket only *separates* agent sessions
+  from the user's personal tmux; the human can attach any time with
+  `tmux -S "$SOCKET" attach -t <session>` to watch live, and detach with
+  `Ctrl+b d` without killing anything. Isolation is for safe cleanup
+  (`kill-server` touches only agent sessions) and zero collision with the
+  user's own tmux/config — not to hide the sessions.
 - Don't touch sessions outside the agent socket; keep everything under `$SOCKET`.
 - `doctor`, `list`, `peek`, `wait` are read-only and safe to run anytime.
 

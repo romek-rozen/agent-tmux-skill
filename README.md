@@ -9,6 +9,8 @@ Pure `bash` + `tmux` + `grep`. No Python, no Node, no other runtime.
 
 > **New to tmux or skills?** Start with the [Beginner's Guide](GUIDE.md).
 >
+> **An AI agent installing or editing this?** See [AGENTS.md](AGENTS.md).
+>
 > **Running an agent *inside* tmux?** You likely need a few `~/.tmux.conf` lines
 > so `Shift+Enter` and notifications work — see
 > [skills/tmux/references/tmux-config.md](skills/tmux/references/tmux-config.md).
@@ -43,9 +45,12 @@ cp -R skills/tmux ~/.claude/skills/tmux
 ```
 
 ### OpenAI Codex
+Codex reads skills from `~/.codex/skills` (or `$CODEX_HOME/skills` if set):
 ```bash
 cp -R skills/tmux ~/.codex/skills/tmux
+chmod +x ~/.codex/skills/tmux/scripts/*.sh
 ```
+Start a fresh Codex session, then invoke the `tmux` skill.
 
 ### OpenCode
 ```bash
@@ -76,6 +81,7 @@ recipes (Python/gdb/lldb/psql/ssh), and the raw-tmux reference.
 ## Layout
 
 ```
+AGENTS.md                    # deploy/install guide for AI agents
 GUIDE.md                     # beginner's guide
 skills/tmux/
 ├── SKILL.md                 # agent instructions

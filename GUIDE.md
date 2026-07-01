@@ -34,6 +34,20 @@ This skill teaches your agent to use tmux **safely**:
 
 That's all you need to start.
 
+### "If it's isolated, can I still watch it?" — yes!
+
+Isolation does **not** mean you're locked out. The skill just puts agent
+sessions on a **separate socket** (a private channel) so they don't mix with
+your own tmux sessions. You can attach and watch live at any time:
+
+```bash
+tmux -S <socket-path> attach -t <session>     # watch live (Ctrl+b then d to leave)
+```
+
+The `start` command prints this exact line for you. The isolation only buys two
+things: safe cleanup (`kill-all` never touches your personal tmux) and zero
+conflict with your `~/.tmux.conf`. It never hides anything from you.
+
 ## 3. Install tmux (one time)
 
 ```bash
