@@ -39,7 +39,7 @@ A wrapper handles the socket and common actions, so prefer it over raw `tmux`:
 ./scripts/tm.sh kill  agent-py                                   # or: kill-all
 ```
 
-Actions: `start | send | type | key | run | wait | idle | peek | list | attach-cmd | kill | kill-all | doctor`.
+Actions: `start | send | type | key | run | wait | idle | classify | peek | list | attach-cmd | kill | kill-all | doctor`.
 Use `wait <re>` for deterministic prompts; use `idle` (wait until the pane stops
 changing) for TUIs / live agents that have no stable ready-string.
 Run `./scripts/tm.sh doctor` first if anything misbehaves (read-only health check:
