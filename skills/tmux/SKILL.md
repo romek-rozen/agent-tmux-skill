@@ -85,7 +85,28 @@ Or capture output once:
   (`kill-server` touches only agent sessions) and zero collision with the
   user's own tmux/config — not to hide the sessions.
 - Don't touch sessions outside the agent socket; keep everything under `$SOCKET`.
-- `doctor`, `list`, `peek`, `wait` are read-only and safe to run anytime.
+- `doctor`, `list`, `peek`, `wait`, `classify` are read-only and safe to run anytime.
+
+### Auto-answer guardrail (what you may / may NEVER click)
+
+When driving another agent/TUI you can auto-approve *safe* prompts, but some
+must always go to a human. Before sending `y`/Enter to a prompt, apply this:
+
+- ✅ **May auto-answer** (idempotent, non-destructive, easily reversible):
+  dev-server port-in-use retries, "install this dev dependency?", "create this
+  directory?", linter/formatter fixes, "reload config?".
+- 🚫 **NEVER auto-answer** — hand to the human (`classify` reports these as
+  `needs-human`):
+  - **secrets/credentials**: password, passphrase, API key, token, 2FA / OTP.
+    Never type a secret into a pane on the agent's own initiative.
+  - **destructive / irreversible**: `rm -rf`, `git push --force`, DROP/DELETE,
+    disk format, "overwrite N files?", production deploys.
+  - **financial / external side effects**: payments, sending mail, posting to
+    third parties, provisioning paid resources.
+  - anything you're **unsure** about — default to escalate, not to click.
+
+Encode this as a short policy in your task, not from memory, and log every
+auto-answer you make (pane, prompt, what you sent) so it's auditable.
 
 ## Socket convention
 
@@ -166,6 +187,33 @@ reliable "it finished / is waiting for me" signal. Keep using `wait <regex>`
 for deterministic prompts (python `>>>`, shell `$`, gdb). Combine them: send a
 task, `idle` until it settles, then `peek` to read the result.
 
+### Triage a quiet pane: `classify` (watchdog)
+
+`idle` tells you a pane went quiet; it doesn't tell you *why*. `classify` greps
+the visible pane for known signatures and prints one state — so a watchdog loop
+can decide whether to auto-continue, escalate, or move on:
+
+```bash
+tm.sh idle w-auth-tests && tm.sh classify w-auth-tests
+#   running       still working (assume so if nothing else matches)
+#   needs-human   confirmation / credential / "waiting for input" prompt
+#   stuck         traceback / error / repeated failure on screen
+#   complete      a done / passed / exited marker on screen
+```
+
+Exit code mirrors the state (`0 running · 1 needs-human · 2 stuck · 3 complete`),
+so it composes in scripts. `needs-human` is where the **auto-answer guardrail**
+(above) kicks in: secrets and destructive/financial prompts are surfaced, never
+auto-clicked. Watchdog pattern over several agents:
+
+```bash
+for s in orch w-auth-tests w-api-refactor; do
+  tm.sh classify "$s" 1     # 1 line per pane: STATE<tab>target + evidence
+done
+```
+
+Use `classify` to *decide*, `peek` to *read the detail*, `wait`/`idle` to *sync*.
+
 ### Addressing: who is who, and routing to ONE target
 
 - **One session = one addressable agent.** `send`/`run`/`send-keys -t <session>`
@@ -190,6 +238,38 @@ task, `idle` until it settles, then `peek` to read the result.
   current screen; but prefer naming it right at `start` so this never happens.
 - **Reading is per-target too.** `peek <session>` / `capture-pane -t <session>`
   read only that session — logs from one agent never leak into another's capture.
+
+### Handing off work: keystrokes vs. files
+
+Two ways to pass a task from one agent to another. Pick per situation:
+
+- **Keystroke handoff** (below): type the task straight into the target's pane
+  with `send-keys -l`. Immediate and simple; best for one-shot instructions and
+  approvals. Fragile for big/multi-line payloads (TUI paste quirks, redraws).
+- **File-based handoff**: agents coordinate through shared files instead of
+  each other's panes — more robust for a planner→executor loop, and every step
+  is on disk (auditable, survives a crashed pane). Convention:
+  - `handoff.md` — the current task: objective, exact files/commands, acceptance
+    criteria. Prefix `BLOCKED:` at the top if an agent gets stuck.
+  - `planner-notes.md` / `executor-notes.md` — private scratchpads; neither
+    agent overwrites the other's.
+  - signal files: planner writes the task then `touch READY_FOR_EXECUTOR`;
+    executor does the work, writes results to `executor-notes.md`, removes the
+    signal, then `touch READY_FOR_PLANNER`; planner reviews and either issues the
+    next task or `touch DONE`.
+
+  Each agent just polls for its signal (no keystrokes into the other's pane):
+
+  ```bash
+  # signals are FILES, not pane text — poll them (not wait-for-text/idle):
+  until [ -f READY_FOR_EXECUTOR ]; do sleep 1; done   # executor's driver
+  until [ -f READY_FOR_PLANNER   ]; do sleep 1; done   # planner's driver
+  ```
+
+  Watch the whole handoff from a third pane:
+  `watch -n1 'ls READY_* DONE 2>/dev/null; echo ---; sed -n 1,80p handoff.md'`.
+  Route the *kickoff* with keystrokes (`tm.sh send w-exec "start the loop"`),
+  then let the files carry the back-and-forth.
 
 ```bash
 # Is it waiting for input?
@@ -227,5 +307,12 @@ swallowed. Fix it in the user's `~/.tmux.conf` — see
 - `./scripts/wait-for-idle.sh -t target [-L name] [-s 3] [-T 60] [-l 200]`
   — wait until the pane stops changing (quiescence). For TUIs / live agents
   with no stable ready-string.
+- `./scripts/classify-pane.sh -t target [-L name] [-l 80] [-q]`
+  — watchdog triage: prints `running|needs-human|stuck|complete` for a pane
+  (exit code mirrors state). Use after `idle` to decide auto-continue vs.
+  escalate; honors the auto-answer guardrail (secrets → `needs-human`).
 - `./scripts/find-sessions.sh [-S socket-path | -L socket-name | --all] [-q filter]`
   — list sessions with attached/created metadata across agent sockets.
+
+Non-obvious behaviors and edge cases are collected in
+[GOTCHAS.md](GOTCHAS.md) — read it before debugging surprising output.

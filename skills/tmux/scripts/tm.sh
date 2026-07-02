@@ -17,6 +17,7 @@
 #   tm.sh run     <session> <command...>          # send a full command line + Enter
 #   tm.sh wait    <session> <regex> [timeout]     # wait for regex in pane (default 15s)
 #   tm.sh idle    <session> [stable] [timeout]    # wait until pane stops changing (TUIs/agents)
+#   tm.sh classify <session> [lines]              # triage: running/needs-human/stuck/complete
 #   tm.sh peek    <session> [lines]               # print last N lines (default 50)
 #   tm.sh list                                    # list sessions on the socket
 #   tm.sh attach-cmd <session>                    # print the copy/paste attach command
@@ -82,6 +83,11 @@ case "$cmd" in
   idle)
     s="${1:?session}"; st="${2:-3}"; to="${3:-60}"
     "$HERE/wait-for-idle.sh" -t "$(target "$s")" -L "$SOCKET" -s "$st" -T "$to"
+    ;;
+  classify)
+    s="${1:?session}"; n="${2:-80}"
+    # Exit code mirrors state (0 running·1 needs-human·2 stuck·3 complete); don't let set -e abort.
+    "$HERE/classify-pane.sh" -t "$(target "$s")" -L "$SOCKET" -l "$n" || true
     ;;
   peek)
     s="${1:?session}"; n="${2:-50}"
