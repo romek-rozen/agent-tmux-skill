@@ -21,11 +21,14 @@ README.md                        # overview + install + credits
 LICENSE                          # Apache-2.0
 skills/tmux/
 ├── SKILL.md                     # the skill (agent instructions)  <-- source of truth
+├── GOTCHAS.md                   # non-obvious behaviors and edge cases
 ├── references/
 │   └── tmux-config.md           # ~/.tmux.conf for running agents inside tmux
 └── scripts/
-    ├── tm.sh                    # wrapper: start/send/type/key/run/wait/peek/list/attach-cmd/kill/kill-all/doctor
+    ├── tm.sh                    # wrapper: start/send/type/key/run/wait/idle/classify/peek/list/attach-cmd/kill/kill-all/doctor
     ├── wait-for-text.sh         # poll a pane for a regex until match or timeout
+    ├── wait-for-idle.sh         # wait until a pane stops changing (TUIs/live agents)
+    ├── classify-pane.sh         # watchdog triage: running/needs-human/stuck/complete
     └── find-sessions.sh         # list sessions with metadata across agent sockets
 ```
 

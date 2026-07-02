@@ -67,6 +67,8 @@ The skill ships a wrapper `scripts/tm.sh` so the agent doesn't retype raw tmux:
 ./scripts/tm.sh wait  agent-py '^>>>' 10      # wait for prompt
 ./scripts/tm.sh send  agent-py 'print(6*7)'   # type + Enter (literal, safe)
 ./scripts/tm.sh wait  agent-py '^42$'
+./scripts/tm.sh idle  agent-py                # wait until pane stops changing (TUIs/agents)
+./scripts/tm.sh classify agent-py             # triage: running/needs-human/stuck/complete
 ./scripts/tm.sh peek  agent-py 50             # last 50 lines
 ./scripts/tm.sh key   agent-py C-c            # raw keys
 ./scripts/tm.sh list                          # sessions on the socket
@@ -74,7 +76,7 @@ The skill ships a wrapper `scripts/tm.sh` so the agent doesn't retype raw tmux:
 ./scripts/tm.sh kill  agent-py                # or: kill-all
 ```
 
-Actions: `start | send | type | key | run | wait | peek | list | attach-cmd | kill | kill-all | doctor`.
+Actions: `start | send | type | key | run | wait | idle | classify | peek | list | attach-cmd | kill | kill-all | doctor`.
 
 See [`skills/tmux/SKILL.md`](skills/tmux/SKILL.md) for the full instructions,
 recipes (Python/gdb/lldb/psql/ssh), and the raw-tmux reference.
@@ -86,11 +88,14 @@ AGENTS.md                    # deploy/install guide for AI agents
 GUIDE.md                     # beginner's guide
 skills/tmux/
 ├── SKILL.md                 # agent instructions
+├── GOTCHAS.md               # non-obvious behaviors and edge cases
 ├── references/
 │   └── tmux-config.md       # ~/.tmux.conf for running agents inside tmux
 └── scripts/
-    ├── tm.sh                # wrapper: start/send/wait/peek/list/kill/doctor/...
+    ├── tm.sh                # wrapper: start/send/wait/idle/classify/peek/list/kill/doctor/...
     ├── wait-for-text.sh     # poll a pane for a regex until match or timeout
+    ├── wait-for-idle.sh     # wait until a pane stops changing (TUIs/live agents)
+    ├── classify-pane.sh     # watchdog triage: running/needs-human/stuck/complete
     └── find-sessions.sh     # list sessions with metadata across agent sockets
 ```
 

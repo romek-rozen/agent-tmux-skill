@@ -178,6 +178,8 @@ Full explanation: [`skills/tmux/references/tmux-config.md`](skills/tmux/referenc
 | `tm.sh key <name> C-c` | Send raw keys (`C-c`, `Enter`, `Escape`, …) |
 | `tm.sh run <name> <cmd>` | Send a whole command line + Enter |
 | `tm.sh wait <name> <regex> [secs]` | Wait until text appears (default 15s) |
+| `tm.sh idle <name> [stable] [secs]` | Wait until the pane stops changing (TUIs / live agents) |
+| `tm.sh classify <name>` | Triage a pane: running / needs-human / stuck / complete |
 | `tm.sh peek <name> [lines]` | Print the last N lines (default 50) |
 | `tm.sh list` | List sessions on the private socket |
 | `tm.sh doctor` | Read-only health check |
