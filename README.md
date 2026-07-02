@@ -116,9 +116,16 @@ Built by combining and adapting ideas from prior work:
   health-check pattern and the focus-safety policy (automation must not steal
   focus / attach on the user's behalf).
 
+## Support
+
+If this skill saves you time, consider supporting the work:
+
+- GitHub Sponsors: https://github.com/sponsors/romek-rozen
+- Patreon: https://www.patreon.com/RomanRozenberger
+
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE).
 
 ## Note
 

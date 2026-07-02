@@ -18,7 +18,7 @@ Source of truth for the skill is `skills/tmux/`. Everything else is docs.
 AGENTS.md                        # this file
 GUIDE.md                         # human beginner guide
 README.md                        # overview + install + credits
-LICENSE                          # MIT
+LICENSE                          # Apache-2.0
 skills/tmux/
 ├── SKILL.md                     # the skill (agent instructions)  <-- source of truth
 ├── references/
@@ -114,7 +114,7 @@ diff -rq skills/tmux ~/.claude/skills/tmux && echo "in sync"
   content stays in the agent's context once loaded — every line is recurring
   token cost). Move long material into `references/` (loaded on demand).
 - Edit `skills/tmux/scripts/tm.sh` for wrapper actions. Run `bash -n` after.
-- Keep the `license: MIT` frontmatter in `SKILL.md` consistent with `LICENSE`.
+- Keep the `license: Apache-2.0` frontmatter in `SKILL.md` consistent with `LICENSE`.
 - Update `README.md` / `GUIDE.md` if user-facing behavior changes.
 - Credit upstream sources in `README.md` (see its Credits section) when porting
   ideas.
