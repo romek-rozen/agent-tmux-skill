@@ -184,6 +184,19 @@ Full explanation: [`skills/tmux/references/tmux-config.md`](skills/tmux/referenc
 | `tm.sh list` | List sessions on the private socket |
 | `tm.sh doctor` | Read-only health check |
 | `tm.sh kill <name>` / `kill-all` | Stop one session / everything |
+| `tm.sh split <name> [-h\|-v] [cmd]` | Split a pane (side-by-side / stacked), optionally run a command |
+| `tm.sh window <name> <win> [cmd]` | Open a new window (a tab) |
+| `tm.sh zoom <name>:0.1` | Toggle a pane to fullscreen and back |
+| `tm.sh resize <name>:0.1 -R 10` | Grow/shrink a pane (`-L/-R/-U/-D` by N cells) |
+| `tm.sh tree <name>` | Show windows/panes with their running command + cwd |
+| `tm.sh layout <name> <preset>` | Arrange into a preset (`dev` / `2x2` / `watch`) |
+| `tm.sh save <name> <file>` / `restore <file>` | Snapshot / rebuild a layout |
+| `tm.sh dashboard [name]` | Status table of every pane (exit code = worst state) |
+
+Multi-pane targets are `<name>:<window>.<pane>` (e.g. `dev:0.1`); a bare `<name>`
+still means window 0, pane 0. See
+[skills/tmux/references/layouts.md](skills/tmux/references/layouts.md) for the
+layout presets and the workspace file format.
 
 ## 9. Troubleshooting
 

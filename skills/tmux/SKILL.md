@@ -1,6 +1,6 @@
 ---
 name: tmux
-description: Remote-control tmux sessions to drive interactive CLIs (python, gdb/lldb, psql, node REPL, ssh, installers, TUIs, other agents) by sending keystrokes and scraping pane output. Use when you must interact with a long-running or interactive terminal program, monitor background work, answer prompts, or observe a process over time — not for one-off non-interactive commands.
+description: Remote-control tmux to drive interactive CLIs (python, gdb/lldb, psql, node REPL, ssh, installers, TUIs, other agents) AND manage multi-pane workspaces — split/zoom/resize panes, apply layout presets, save/restore a layout, and watch many panes at once with a status dashboard — by sending keystrokes and scraping pane output on a private socket. Use when you must interact with a long-running or interactive terminal program, build a multi-pane workspace, monitor background work or several panes together, answer prompts, or observe a process over time — not for one-off non-interactive commands.
 license: Apache-2.0
 compatibility: Requires tmux (>=3.0), bash, and grep. Works on macOS and Linux with stock tmux.
 metadata:
@@ -19,6 +19,7 @@ stock tmux. Stay off the user's personal tmux by using a private socket.
 ✅ Programs that prompt for input (installers, `ssh`, confirmations, TUIs)
 ✅ Long-running processes you must watch, or background work to check on later
 ✅ Driving/monitoring another agent (Claude Code, Codex) running in a pane
+✅ Multi-pane workspaces (editor + logs + shell) and watching many panes at once
 
 ❌ One-off non-interactive commands → just run them with `bash`
 ❌ Fire-and-forget background jobs that need no interaction → run backgrounded
@@ -39,16 +40,20 @@ A wrapper handles the socket and common actions, so prefer it over raw `tmux`:
 ./scripts/tm.sh kill  agent-py                                   # or: kill-all
 ```
 
-Actions: `start | send | type | key | run | wait | idle | classify | peek | list | attach-cmd | kill | kill-all | doctor`.
+Core actions: `start | send | type | key | run | wait | idle | classify | peek | list | attach-cmd | kill | kill-all | doctor`.
+Pane/window manager: `split | window | select | zoom | rename | resize | tree`.
+Layouts & workspaces: `layout | save | restore`. Monitoring: `dashboard`.
 Use `wait <re>` for deterministic prompts; use `idle` (wait until the pane stops
 changing) for TUIs / live agents that have no stable ready-string.
 Run `./scripts/tm.sh doctor` first if anything misbehaves (read-only health check:
 tmux version, socket name, live sessions).
 Socket is the named tmux socket `$AGENT_TMUX_SOCKET` (default `agent`), i.e.
-`tmux -L agent ...`; target defaults to `<session>:0.0`. New sessions start in the
-current directory (the project you're working in); choose another with
-`start <s> --cwd /path ...` or `TM_CWD=/path`. Drop to raw `tmux -L agent ...` (below) only for
-anything the wrapper doesn't cover (extra windows/panes, custom capture ranges).
+`tmux -L agent ...`. Target form is `<session>[:window[.pane]]`; a bare `<session>`
+defaults to `:0.0` (deterministic), address other panes as `<session>:0.1`. New
+sessions start in the current directory (the project you're working in); choose
+another with `start <s> --cwd /path ...` or `TM_CWD=/path`. Drop to raw
+`tmux -L agent ...` (below) only for anything the wrapper doesn't cover (custom
+capture ranges, exotic layouts).
 
 ## Quickstart (raw tmux, isolated socket)
 
@@ -158,6 +163,57 @@ For long commands, poll for a completion marker (e.g. `Program exited`,
 (silent, token-cheap), 1 on timeout (prints only the last 40 lines to stderr;
 use `peek` if you need more).
 
+## Panes & windows
+
+Beyond one pane per session, `tm.sh` manages geometry so you can put several
+processes side by side (editor + logs + shell, or parallel jobs):
+
+```bash
+./scripts/tm.sh split  dev -h                 # split active pane side-by-side
+./scripts/tm.sh split  dev -v 'tail -f app.log'   # split stacked, run a command in the new pane
+./scripts/tm.sh window dev logs 'journalctl -f'   # new WINDOW named "logs" running a cmd
+./scripts/tm.sh select dev:0.1                 # focus pane 1 of window 0
+./scripts/tm.sh zoom   dev:0.1                 # toggle fullscreen for that pane
+./scripts/tm.sh resize dev:0.1 -R 10           # grow the pane 10 cells to the right
+./scripts/tm.sh rename dev:1 build             # rename window 1 (a dotted target sets a pane title)
+./scripts/tm.sh tree   dev                     # windows/panes with running cmd + cwd
+```
+
+`-h` = side-by-side, `-v` = stacked (default). A dotted target (`dev:0.1`) names a
+pane; without one (`dev:1`) it names a window. After splitting, address each pane
+explicitly (`dev:0.1`) — see the auto-answer guardrail and per-target routing below.
+
+## Layouts & workspaces
+
+Presets arrange a session into a ready-made shape; save/restore persist the whole
+layout. Details in [references/layouts.md](references/layouts.md).
+
+```bash
+./scripts/tm.sh layout  dev dev               # editor + logs + shell (also: 2x2, watch)
+./scripts/tm.sh save    dev /tmp/dev.tmux     # write pane/window/cwd/cmd records
+./scripts/tm.sh kill    dev
+./scripts/tm.sh restore /tmp/dev.tmux dev     # rebuild the same layout (session must not exist)
+```
+
+`save` records one line per pane (window, pane, cwd, running command). `restore`
+rebuilds windows/panes and cwds but does **not** auto-rerun the recorded
+commands — start them yourself with `run`/`window` so nothing runs unexpectedly.
+
+## Monitoring dashboard
+
+`dashboard` classifies every pane at once and prints a table; its exit code is the
+worst state seen, so you can loop on it (states/priority mirror `classify`:
+`needs-human > stuck > complete > running`, exit `1 · 2 · 3 · 0`):
+
+```bash
+./scripts/tm.sh dashboard dev            # one snapshot (all panes in "dev")
+./scripts/tm.sh dashboard                # all panes on the whole agent socket
+
+# Watch until any pane needs a human (exit 1) or all complete (exit 3):
+while ./scripts/tm.sh dashboard dev; do sleep 5; done
+echo "a pane needs attention — inspect it"
+```
+
 ## Interactive tool recipes
 
 - **Python REPL**: set `PYTHON_BASIC_REPL=1` (the fancy REPL breaks send-keys),
@@ -216,9 +272,10 @@ Use `classify` to *decide*, `peek` to *read the detail*, `wait`/`idle` to *sync*
 
 ### Addressing: who is who, and routing to ONE target
 
-- **One session = one addressable agent.** `send`/`run`/`send-keys -t <session>`
-  go ONLY to that session's pane. There is **no broadcast** — input is not
-  mirrored to other sessions. Route by choosing the right `-t` target.
+- **Every target is addressed independently.** `send`/`run`/`send-keys -t <target>`
+  go ONLY to that one session/pane. There is **no broadcast** — input is not
+  mirrored elsewhere, whether targets are separate sessions or panes within one
+  window. Route by choosing the right `-t` target (`w-auth-tests`, `dev:0.1`).
 - **Never enable `synchronize-panes`.** With `setw synchronize-panes on`, tmux
   mirrors keystrokes to every pane in a window — that's the only way input hits
   "all panes". Keep it off (default). If unsure:
@@ -299,8 +356,14 @@ swallowed. Fix it in the user's `~/.tmux.conf` — see
 
 ## Helper scripts
 
-- `./scripts/tm.sh <action> ...` — one wrapper for start/send/run/wait/peek/list/kill
-  on the private socket (see "Fast path" above). Use this first.
+- `./scripts/tm.sh <action> ...` — one wrapper for start/send/run/wait/peek/list/kill,
+  plus pane/window management (split/window/zoom/resize/tree), layout presets,
+  workspace save/restore, and the dashboard, all on the private socket (see
+  "Fast path" above). Use this first.
+- `./scripts/dashboard.sh [-L name] [-s session] [-l 80]`
+  — classify every pane on the socket into one status table; exit code is the
+  worst state seen (`1 needs-human · 2 stuck · 3 complete · 0 running`), so it
+  composes in a `while` watch loop.
 - `./scripts/wait-for-text.sh -t target -p pattern [-F] [-T 20] [-i 0.5] [-l 2000]`
   — poll a pane for a regex (`-F` = fixed string) until match or timeout.
   For deterministic prompts.

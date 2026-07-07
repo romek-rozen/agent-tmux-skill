@@ -76,10 +76,24 @@ The skill ships a wrapper `scripts/tm.sh` so the agent doesn't retype raw tmux:
 ./scripts/tm.sh kill  agent-py                # or: kill-all
 ```
 
-Actions: `start | send | type | key | run | wait | idle | classify | peek | list | attach-cmd | kill | kill-all | doctor`.
+It also manages multi-pane workspaces — splits, windows, layout presets, and a
+monitoring dashboard across many panes:
+
+```bash
+./scripts/tm.sh start dev --cwd ~/my-project
+./scripts/tm.sh layout dev dev                # editor + logs + shell (also: 2x2, watch)
+./scripts/tm.sh run  dev:0.1 'tail -f app.log'   # address a specific pane
+./scripts/tm.sh split dev:0.0 -h 'htop'          # split + run a command
+./scripts/tm.sh dashboard dev                 # status table of every pane; exit = worst state
+./scripts/tm.sh save dev /tmp/dev.tmux        # snapshot the layout; restore with `restore`
+```
+
+Core actions: `start | send | type | key | run | wait | idle | classify | peek | list | attach-cmd | kill | kill-all | doctor`.
+Pane/window manager: `split | window | select | zoom | rename | resize | tree`.
+Layouts & workspaces: `layout | save | restore`. Monitoring: `dashboard`.
 
 See [`skills/tmux/SKILL.md`](skills/tmux/SKILL.md) for the full instructions,
-recipes (Python/gdb/lldb/psql/ssh), and the raw-tmux reference.
+recipes (Python/gdb/lldb/psql/ssh), layout presets, and the raw-tmux reference.
 
 ## Layout
 
@@ -90,12 +104,14 @@ skills/tmux/
 ├── SKILL.md                 # agent instructions
 ├── GOTCHAS.md               # non-obvious behaviors and edge cases
 ├── references/
-│   └── tmux-config.md       # ~/.tmux.conf for running agents inside tmux
+│   ├── tmux-config.md       # ~/.tmux.conf for running agents inside tmux
+│   └── layouts.md           # layout presets (dev/2x2/watch) + workspace file format
 └── scripts/
-    ├── tm.sh                # wrapper: start/send/wait/idle/classify/peek/list/kill/doctor/...
+    ├── tm.sh                # wrapper: core + pane/window mgmt + layouts + save/restore + dashboard
     ├── wait-for-text.sh     # poll a pane for a regex until match or timeout
     ├── wait-for-idle.sh     # wait until a pane stops changing (TUIs/live agents)
     ├── classify-pane.sh     # watchdog triage: running/needs-human/stuck/complete
+    ├── dashboard.sh         # classify every pane into one status table (exit = worst state)
     └── find-sessions.sh     # list sessions with metadata across agent sockets
 ```
 

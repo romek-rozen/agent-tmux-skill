@@ -23,12 +23,14 @@ skills/tmux/
 ├── SKILL.md                     # the skill (agent instructions)  <-- source of truth
 ├── GOTCHAS.md                   # non-obvious behaviors and edge cases
 ├── references/
-│   └── tmux-config.md           # ~/.tmux.conf for running agents inside tmux
+│   ├── tmux-config.md           # ~/.tmux.conf for running agents inside tmux
+│   └── layouts.md               # layout presets (dev/2x2/watch) + workspace file format
 └── scripts/
-    ├── tm.sh                    # wrapper: start/send/type/key/run/wait/idle/classify/peek/list/attach-cmd/kill/kill-all/doctor
+    ├── tm.sh                    # wrapper: core (start/send/type/key/run/wait/idle/classify/peek/list/attach-cmd/kill/kill-all/doctor) + pane/window mgmt (split/window/select/zoom/rename/resize/tree) + layouts (layout/save/restore) + dashboard
     ├── wait-for-text.sh         # poll a pane for a regex until match or timeout
     ├── wait-for-idle.sh         # wait until a pane stops changing (TUIs/live agents)
     ├── classify-pane.sh         # watchdog triage: running/needs-human/stuck/complete
+    ├── dashboard.sh             # classify every pane into one status table (exit = worst state)
     └── find-sessions.sh         # list sessions with metadata across agent sockets
 ```
 
@@ -49,6 +51,15 @@ skills/tmux/
    `$PWD`. Don't drop the `-c` flag on `tmux new`.
 5. **Shell only.** No new runtime dependencies. Keep scripts `bash` + `tmux` +
    `grep`. Prefer editing `tm.sh` over adding new scripts.
+6. **Deterministic single-pane, opt-in multi-pane.** A bare `<session>` target
+   still resolves to `:0.0` (unchanged behavior); the pane/window manager and
+   layouts are additive. Address extra panes explicitly as `<session>:win.pane`.
+7. **State lives in exit codes AND stdout.** `classify-pane.sh` signals state
+   both ways (`0 running · 1 needs-human · 2 stuck · 3 complete`). Any consumer
+   under `set -o pipefail` (e.g. `dashboard.sh`) MUST neutralize the non-zero
+   exit with `|| true` before piping, then read the state word from stdout —
+   otherwise the failing pipeline corrupts the result and swallows non-running
+   states. Read state from stdout; use the exit code only for direct branching.
 
 ## How to install the skill (per harness)
 
