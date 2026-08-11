@@ -64,6 +64,21 @@ sudo dnf install tmux
 tmux -V
 ```
 
+### Windows (WSL2)
+
+Native Windows shells are not supported because this skill requires the Unix
+versions of `bash` and `tmux`. On Windows, install WSL2 with a Linux distribution
+such as Ubuntu, then run your coding agent and this skill inside WSL:
+
+```bash
+sudo apt update
+sudo apt install tmux
+```
+
+Use Windows Terminal as the interface to your WSL shell if you like, but do not
+run the skill directly in PowerShell, Command Prompt, or Git Bash. Keeping the
+repository under `~/projects` inside WSL is usually faster than `/mnt/c/...`.
+
 You want **tmux 3.5 or newer** for the smoothest experience (see step 7).
 
 ## 4. Install the skill

@@ -117,7 +117,22 @@ skills/tmux/
 
 ## Requirements
 
-- `tmux` (>= 3.0), `bash`, `grep` — present on stock macOS and Linux.
+- `tmux` (>= 3.0), `bash`, `grep` — available on macOS and Linux.
+- **Windows:** use WSL2 (for example Ubuntu) and run the agent, skill, and tmux
+  inside WSL. Native PowerShell, Command Prompt, Git Bash, and Windows Terminal
+  without WSL are not supported. For better filesystem performance, keep the
+  repository under the WSL filesystem (for example `~/projects`) rather than
+  `/mnt/c/...`.
+
+Inside Ubuntu on WSL2, install tmux with:
+
+```bash
+sudo apt update
+sudo apt install tmux
+```
+
+WSL reports itself as Linux, so the skill metadata intentionally lists only
+`darwin` and `linux` rather than native Windows.
 
 ## Credits
 

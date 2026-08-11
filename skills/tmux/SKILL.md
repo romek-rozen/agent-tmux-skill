@@ -2,7 +2,7 @@
 name: tmux
 description: Remote-control tmux to drive interactive CLIs (python, gdb/lldb, psql, node REPL, ssh, installers, TUIs, other agents) AND manage multi-pane workspaces — split/zoom/resize panes, apply layout presets, save/restore a layout, and watch many panes at once with a status dashboard — by sending keystrokes and scraping pane output on a private socket. Use when you must interact with a long-running or interactive terminal program, build a multi-pane workspace, monitor background work or several panes together, answer prompts, or observe a process over time — not for one-off non-interactive commands.
 license: Apache-2.0
-compatibility: Requires tmux (>=3.0), bash, and grep. Works on macOS and Linux with stock tmux.
+compatibility: Requires tmux (>=3.0), bash, and grep. Works on macOS and Linux, including Windows through WSL2; native Windows shells are unsupported.
 metadata:
   { "os": ["darwin", "linux"], "requires": { "bins": ["tmux", "bash", "grep"] } }
 ---
@@ -11,7 +11,8 @@ metadata:
 
 Use tmux as a programmable terminal multiplexer for interactive work: start a
 program, poll its output, send it input, and clean up. Works on Linux/macOS with
-stock tmux. Stay off the user's personal tmux by using a private socket.
+stock tmux and on Windows through WSL2 (not native PowerShell, Command Prompt,
+or Git Bash). Stay off the user's personal tmux by using a private socket.
 
 ## When to use
 
