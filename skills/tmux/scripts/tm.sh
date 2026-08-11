@@ -55,9 +55,9 @@ command -v tmux >/dev/null 2>&1 || { echo "tmux not found in PATH" >&2; exit 1; 
 
 t() { tmux -L "$SOCKET" "$@"; }
 # A bare session name defaults to window 0, pane 0 (deterministic single-pane
-# behavior). A target that already names a window/pane (contains ':' or '.') is
-# used verbatim, so multi-pane sessions can be addressed as <session>:<win>.<pane>.
-target() { case "$1" in *[:.]*) printf '%s' "$1" ;; *) printf '%s:0.0' "$1" ;; esac; }
+# behavior). A target containing ':' already names a window/pane and is used
+# verbatim. Dots alone are valid in session names and do not make a full target.
+target() { case "$1" in *:*) printf '%s' "$1" ;; *) printf '%s:0.0' "$1" ;; esac; }
 
 # Apply a named layout preset: splits + a native tmux layout, so it works no
 # matter the current geometry. See references/layouts.md for descriptions.
@@ -106,7 +106,10 @@ case "$cmd" in
       t new -d -s "$s" -c "$CWD" -n shell
       t set-option -t "$s" @agent_owned 1        # mark ours, so kill-all spares user sessions
     fi
-    if [[ $# -gt 0 ]]; then t send-keys -t "$(target "$s")" -- "$*" Enter; fi
+    if [[ $# -gt 0 ]]; then
+      t send-keys -t "$(target "$s")" -l -- "$*"
+      t send-keys -t "$(target "$s")" Enter
+    fi
     echo "cwd: $CWD"
     attach_cmd "$s"
     ;;
@@ -126,7 +129,8 @@ case "$cmd" in
     ;;
   run)
     s="${1:?session}"; shift
-    t send-keys -t "$(target "$s")" -- "$*" Enter
+    t send-keys -t "$(target "$s")" -l -- "$*"
+    t send-keys -t "$(target "$s")" Enter
     ;;
   wait)
     s="${1:?session}"; pat="${2:?regex}"; to="${3:-15}"
@@ -249,18 +253,27 @@ case "$cmd" in
     [[ -f "$file" ]] || { echo "no such file: $file" >&2; exit 1; }
     [[ -n "$s" ]] || s="$(sed -n 's/^# tmux workspace — session: //p' "$file" | head -1)"
     [[ -n "$s" ]] || { echo "session name required (not found in file)" >&2; exit 1; }
+    grep -q '^[^#[:space:]]' "$file" || { echo "workspace has no pane records: $file" >&2; exit 1; }
     t has-session -t "$s" 2>/dev/null && { echo "session '$s' already exists — kill it first" >&2; exit 1; }
-    prev_win=""
+    prev_saved_win=""
+    current_win=""
     first=1
-    while IFS=$'\t' read -r win pane cwd cmdname; do
-      [[ "$win" == \#* || -z "$win" ]] && continue
+    while IFS=$'\t' read -r saved_win pane cwd cmdname; do
+      [[ "$saved_win" == \#* || -z "$saved_win" ]] && continue
       [[ -d "$cwd" ]] || cwd="$CWD"
       if [[ $first == 1 ]]; then
-        t new -d -s "$s" -c "$cwd"; t set-option -t "$s" @agent_owned 1; prev_win="$win"; first=0
-      elif [[ "$win" != "$prev_win" ]]; then
-        t new-window -t "$s" -c "$cwd"; prev_win="$win"
+        t new -d -s "$s" -c "$cwd"
+        t set-option -t "$s" @agent_owned 1
+        current_win="$(t display-message -p -t "$s" '#{window_index}')"
+        prev_saved_win="$saved_win"
+        first=0
+      elif [[ "$saved_win" != "$prev_saved_win" ]]; then
+        current_win="$(t new-window -P -F '#{window_index}' -t "$s" -c "$cwd")"
+        prev_saved_win="$saved_win"
       else
-        t split-window -t "$s:$win" -c "$cwd"
+        # Use the actual newly allocated index: user tmux options such as
+        # base-index may differ from the indices recorded in the workspace.
+        t split-window -t "$s:$current_win" -c "$cwd"
       fi
     done < "$file"
     # Even out each window's panes.

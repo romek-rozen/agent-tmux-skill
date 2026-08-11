@@ -68,7 +68,7 @@ pane="$("${tmux_cmd[@]}" capture-pane -p -J -t "$target" -S "-${lines}" 2>/dev/n
 # Signature sets. Order matters: needs-human (secrets first) > stuck > complete.
 # Patterns are case-insensitive extended regex; keep them conservative to avoid
 # false positives on ordinary log lines.
-SECRET_RE='password[: ]|passphrase|enter.*(token|api[ _-]?key|secret)|authenticat|2fa|one[- ]time code'
+SECRET_RE='password[: ]|passphrase|enter.*(token|api[ _-]?key|secret)|authentication required|authenticate (yourself|to continue)|2fa|one[- ]time code'
 CONFIRM_RE='\[y/n\]|\(y/n\)|\(yes/no\)|\[yes/no\]|proceed\?|continue\?|are you sure|overwrite\?|press enter to'
 WAIT_RE='waiting for (your )?input|awaiting.*(input|response|instruction)|what should i do|how would you like'
 STUCK_RE='traceback \(most recent|^error:|fatal:|segmentation fault|panic:|unhandled exception|command not found|no such file or directory|permission denied|address already in use'

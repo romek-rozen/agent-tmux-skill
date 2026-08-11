@@ -202,16 +202,25 @@ commands — start them yourself with `run`/`window` so nothing runs unexpectedl
 ## Monitoring dashboard
 
 `dashboard` classifies every pane at once and prints a table; its exit code is the
-worst state seen, so you can loop on it (states/priority mirror `classify`:
-`needs-human > stuck > complete > running`, exit `1 · 2 · 3 · 0`):
+worst state seen (`needs-human > stuck > complete > running`, corresponding to
+`1 · 2 · 3 · 0`). Therefore `3` means at least one pane is complete, not
+necessarily all panes:
 
 ```bash
 ./scripts/tm.sh dashboard dev            # one snapshot (all panes in "dev")
 ./scripts/tm.sh dashboard                # all panes on the whole agent socket
 
-# Watch until any pane needs a human (exit 1) or all complete (exit 3):
-while ./scripts/tm.sh dashboard dev; do sleep 5; done
-echo "a pane needs attention — inspect it"
+# Watch until a pane needs attention or any pane completes:
+while true; do
+  ./scripts/tm.sh dashboard dev; status=$?
+  (( status == 0 )) || break
+  sleep 5
+done
+case "$status" in
+  1) echo "a pane needs human input" ;;
+  2) echo "a pane appears stuck" ;;
+  3) echo "a pane completed — inspect the dashboard for remaining work" ;;
+esac
 ```
 
 ## Interactive tool recipes
